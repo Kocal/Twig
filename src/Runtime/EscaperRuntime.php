@@ -17,6 +17,8 @@ use Twig\Markup;
 
 final class EscaperRuntime implements RuntimeExtensionInterface
 {
+    private const HTML_ATTR_RELAXED_SAFE_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.-_:@[]';
+
     /** @var array<string, callable(string, string): string> */
     private $escapers = [];
 
@@ -249,8 +251,13 @@ final class EscaperRuntime implements RuntimeExtensionInterface
 
                 return $string;
 
-            case 'html_attr':
             case 'html_attr_relaxed':
+                // Attribute names, which this strategy is meant for, rarely need escaping: skip the regular expressions then
+                if ('UTF-8' === $charset && \strlen($string) === strspn($string, self::HTML_ATTR_RELAXED_SAFE_CHARS)) {
+                    return $string;
+                }
+                // no break
+            case 'html_attr':
                 if ('UTF-8' !== $charset) {
                     $string = $this->convertEncoding($string, 'UTF-8', $charset);
                 }
