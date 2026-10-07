@@ -17,6 +17,8 @@ use Twig\Markup;
 
 final class EscaperRuntime implements RuntimeExtensionInterface
 {
+    private const HTML_SPECIAL_CHARS = ['&' => '&amp;', '"' => '&quot;', '\'' => '&#039;', '<' => '&lt;', '>' => '&gt;'];
+
     /** @var array<string, callable(string, string): string> */
     private $escapers = [];
 
@@ -135,6 +137,11 @@ final class EscaperRuntime implements RuntimeExtensionInterface
                 // see https://www.php.net/htmlspecialchars
 
                 if ('UTF-8' === $charset) {
+                    // Up to PHP 8.6, htmlspecialchars() decodes every character (see https://github.com/php/php-src/pull/23957): on long valid UTF-8 strings, replacing these characters with strtr() is faster
+                    if (\PHP_VERSION_ID < 80700 && \strlen($string) > 32 && preg_match('//u', $string)) {
+                        return strtr($string, self::HTML_SPECIAL_CHARS);
+                    }
+
                     return htmlspecialchars($string, \ENT_QUOTES | \ENT_SUBSTITUTE, 'UTF-8');
                 }
 
